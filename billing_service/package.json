@@ -1,0 +1,15 @@
+{
+  "name": "booking_service",
+  "version": "1.0.0",
+  "description": "Blusalt Technical Assessment",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Owolabi Tobiloba",
+  "license": "ISC",
+  "dependencies": {
+    "faker": "^5.5.3",
+    "typeorm-seeding": "^1.6.1"
+  }
+}
