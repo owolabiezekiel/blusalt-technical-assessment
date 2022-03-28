@@ -12,6 +12,7 @@
   "author": "Owolabi Tobiloba",
   "license": "ISC",
   "dependencies": {
+    "amqplib": "^0.8.0",
     "class-transformer": "^0.5.1",
     "cors": "^2.8.5",
     "decimal.js": "^10.3.1",
@@ -23,6 +24,7 @@
     "typeorm-seeding": "^1.6.1"
   },
   "devDependencies": {
+    "@types/amqplib": "^0.8.2",
     "@types/express": "^4.17.13",
     "@types/faker": "^6.6.9",
     "@types/node": "^17.0.23",
