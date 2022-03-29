@@ -20,17 +20,39 @@ createConnection()
             throw createChannelError;
           }
 
-          channel.assertQueue("transaction", { durable: false });
+          channel.assertQueue("transaction_created", { durable: false });
 
           const app = express();
           app.use(express.json());
 
-          channel.consume("transaction", (message) => {
-            console.log(message.content.toString());
-          });
+          channel.consume(
+            "transaction_created",
+            async (message) => {
+              const billing: Billing = new Billing();
+              const payload = JSON.parse(message.content.toString());
+              billing.customer_id = payload.customer_id;
+              billing.amount = payload.amount;
+              console.log(
+                "Processing transaction for customer: " +
+                  billing.customer_id +
+                  " for amount: " +
+                  billing.amount
+              );
+
+              await billingRepository.save(billing);
+              console.log(
+                "Billing Created Successfully:\nSending to worker service for final processing......"
+              );
+            },
+            { noAck: true }
+          );
 
           app.listen(8081);
           console.log("Billing service started......");
+          process.on("beforeExit", () => {
+            console.log("Closing message queue connection");
+            connection.close();
+          });
         });
       }
     );

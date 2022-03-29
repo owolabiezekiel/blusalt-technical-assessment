@@ -38,13 +38,36 @@ createConnection()
             }
           );
 
-          app.post("/customer/fundaccount", (req: Request, res: Response) => {
-            channel.sendToQueue("transaction", Buffer.from("HI"));
-            res.json(req.body);
-          });
+          app.post(
+            "/customer/fundaccount",
+            async (req: Request, res: Response, next: express.NextFunction) => {
+              const customer_id = req.body.customer_id;
+              if (customer_id === null || customer_id == null) {
+                res.sendStatus(400).send("Please input customer id");
+                throw new Error("Please provide customer id");
+              }
+
+              const customer = await customerRepository.findOne(customer_id);
+              if (!customer) {
+                res.sendStatus(404).send("User not found");
+              }
+
+              console.log("Queing transaction for processing.........");
+              channel.sendToQueue(
+                "transaction_created",
+                Buffer.from(JSON.stringify(req.body))
+              );
+
+              res.json(req.body);
+            }
+          );
 
           app.listen(8080);
-          console.log("Hello world");
+          console.log("Customer Service Started....");
+          process.on("beforeExit", () => {
+            console.log("Closing message queue connection");
+            connection.close();
+          });
         });
       }
     );

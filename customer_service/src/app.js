@@ -77,12 +77,35 @@ var amqp = require("amqplib/callback_api");
                     }
                 });
             }); });
-            app.post("/customer/fundaccount", function (req, res) {
-                channel.sendToQueue("transaction", Buffer.from("HI"));
-                res.json(req.body);
-            });
+            app.post("/customer/fundaccount", function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+                var customer_id, customer;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            customer_id = req.body.customer_id;
+                            if (customer_id === null || customer_id == null) {
+                                res.sendStatus(400).send("Please input customer id");
+                                throw new Error("Please provide customer id");
+                            }
+                            return [4 /*yield*/, customerRepository.findOne(customer_id)];
+                        case 1:
+                            customer = _a.sent();
+                            if (!customer) {
+                                res.sendStatus(404).send("User not found");
+                            }
+                            console.log("Queing transaction for processing.........");
+                            channel.sendToQueue("transaction_created", Buffer.from(JSON.stringify(req.body)));
+                            res.json(req.body);
+                            return [2 /*return*/];
+                    }
+                });
+            }); });
             app.listen(8080);
-            console.log("Hello world");
+            console.log("Customer Service Started....");
+            process.on("beforeExit", function () {
+                console.log("Closing message queue connection");
+                connection.close();
+            });
         });
     });
 })
