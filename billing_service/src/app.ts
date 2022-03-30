@@ -20,32 +20,28 @@ createConnection()
             throw createChannelError;
           }
 
-          channel.assertQueue("transaction_created", { durable: false });
-
-          const app = express();
-          app.use(express.json());
+          channel.assertQueue("update_billing_status", { durable: false });
 
           channel.consume(
-            "transaction_created",
+            "update_billing_status",
             async (message) => {
-              const billing: Billing = new Billing();
               const payload = JSON.parse(message.content.toString());
-              billing.customer_id = payload.customer_id;
-              billing.amount = payload.amount;
-              console.log(
-                "Processing transaction for customer: " +
-                  billing.customer_id +
-                  " for amount: " +
-                  billing.amount
+              const billingId = payload.id;
+              const status = payload.status;
+              const billing: Billing = await billingRepository.findOne(
+                billingId
               );
-
+              billing.status = status;
               await billingRepository.save(billing);
               console.log(
-                "Billing Created Successfully:\nSending to worker service for final processing......"
+                "Billing updated successfully\nNew status: " + status
               );
             },
             { noAck: true }
           );
+
+          const app = express();
+          app.use(express.json());
 
           app.post(
             "/billing/createTransaction",
@@ -63,6 +59,11 @@ createConnection()
 
               const saveBilling = await billingRepository.save(billing);
               console.log(saveBilling);
+              console.log("Queing transaction for processing.........");
+              channel.sendToQueue(
+                "process_billing",
+                Buffer.from(JSON.stringify(saveBilling))
+              );
 
               res.send(JSON.stringify(saveBilling));
             }

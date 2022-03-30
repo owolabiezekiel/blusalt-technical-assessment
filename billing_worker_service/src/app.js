@@ -38,11 +38,11 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var express = require("express");
 var typeorm_1 = require("typeorm");
-var billing_1 = require("./entity/billing");
+var customer_1 = require("./entity/customer");
 var amqp = require("amqplib/callback_api");
 (0, typeorm_1.createConnection)()
     .then(function (db) {
-    var billingRepository = db.getRepository(billing_1.Billing);
+    var customerRepository = db.getRepository(customer_1.Customer);
     amqp.connect("amqps://urpyormt:kZSThtc9hilGyHDyobXuSxRQ12i7aP7K@beaver.rmq.cloudamqp.com/urpyormt", function (connectError, connection) {
         if (connectError) {
             throw connectError;
@@ -51,55 +51,39 @@ var amqp = require("amqplib/callback_api");
             if (createChannelError) {
                 throw createChannelError;
             }
-            channel.assertQueue("update_billing_status", { durable: false });
-            channel.consume("update_billing_status", function (message) { return __awaiter(void 0, void 0, void 0, function () {
-                var payload, billingId, status, billing;
+            channel.assertQueue("process_billing", { durable: false });
+            var app = express();
+            app.use(express.json());
+            channel.consume("process_billing", function (message) { return __awaiter(void 0, void 0, void 0, function () {
+                var payload, customer_id, customer, updateCustomer;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
                             payload = JSON.parse(message.content.toString());
-                            billingId = payload.id;
-                            status = payload.status;
-                            return [4 /*yield*/, billingRepository.findOne(billingId)];
+                            customer_id = payload.customer_id;
+                            return [4 /*yield*/, customerRepository.findOne(customer_id)];
                         case 1:
-                            billing = _a.sent();
-                            billing.status = status;
-                            return [4 /*yield*/, billingRepository.save(billing)];
+                            customer = _a.sent();
+                            customer.account_balance =
+                                customer.account_balance + payload.amount;
+                            return [4 /*yield*/, customerRepository.save(customer)];
                         case 2:
-                            _a.sent();
-                            console.log("Billing updated successfully\nNew status: " + status);
+                            updateCustomer = _a.sent();
+                            console.log("Billing processed successfully\nNew balance: " +
+                                customer.account_balance +
+                                "\nSending event to update billing status");
+                            if (updateCustomer) {
+                                channel.sendToQueue("update_billing_status", Buffer.from(JSON.stringify({ id: payload.id, status: "completed" })));
+                            }
+                            else {
+                                channel.sendToQueue("update_billing_status", Buffer.from(JSON.stringify({ id: payload.id, status: "failed" })));
+                            }
                             return [2 /*return*/];
                     }
                 });
             }); }, { noAck: true });
-            var app = express();
-            app.use(express.json());
-            app.post("/billing/createTransaction", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-                var billing, payload, saveBilling;
-                return __generator(this, function (_a) {
-                    switch (_a.label) {
-                        case 0:
-                            billing = new billing_1.Billing();
-                            payload = req.body;
-                            billing.customer_id = payload.customer_id;
-                            billing.amount = payload.amount;
-                            console.log("Processing transaction for customer: " +
-                                billing.customer_id +
-                                " for amount: " +
-                                billing.amount);
-                            return [4 /*yield*/, billingRepository.save(billing)];
-                        case 1:
-                            saveBilling = _a.sent();
-                            console.log(saveBilling);
-                            console.log("Queing transaction for processing.........");
-                            channel.sendToQueue("process_billing", Buffer.from(JSON.stringify(saveBilling)));
-                            res.send(JSON.stringify(saveBilling));
-                            return [2 /*return*/];
-                    }
-                });
-            }); });
-            app.listen(8081);
-            console.log("Billing service started......");
+            app.listen(8082);
+            console.log("Billing worker service started......");
             process.on("beforeExit", function () {
                 console.log("Closing message queue connection");
                 connection.close();

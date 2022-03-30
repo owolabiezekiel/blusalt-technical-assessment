@@ -53,12 +53,6 @@ createConnection()
                 res.sendStatus(404).send("User not found");
               }
 
-              // console.log("Queing transaction for processing.........");
-              // channel.sendToQueue(
-              //   "transaction_created",
-              //   Buffer.from(JSON.stringify(req.body))
-              // );
-
               const responseFromBillingService = await axios.post(
                 "http://localhost:8081/billing/createTransaction",
                 req.body
