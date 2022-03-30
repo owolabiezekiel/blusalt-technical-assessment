@@ -75,6 +75,28 @@ var amqp = require("amqplib/callback_api");
                     }
                 });
             }); }, { noAck: true });
+            app.post("/billing/createTransaction", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+                var billing, payload, saveBilling;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            billing = new billing_1.Billing();
+                            payload = req.body;
+                            billing.customer_id = payload.customer_id;
+                            billing.amount = payload.amount;
+                            console.log("Processing transaction for customer: " +
+                                billing.customer_id +
+                                " for amount: " +
+                                billing.amount);
+                            return [4 /*yield*/, billingRepository.save(billing)];
+                        case 1:
+                            saveBilling = _a.sent();
+                            console.log(saveBilling);
+                            res.send(JSON.stringify(saveBilling));
+                            return [2 /*return*/];
+                    }
+                });
+            }); });
             app.listen(8081);
             console.log("Billing service started......");
             process.on("beforeExit", function () {

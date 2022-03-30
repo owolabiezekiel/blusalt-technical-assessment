@@ -40,6 +40,7 @@ var express = require("express");
 var typeorm_1 = require("typeorm");
 var customer_1 = require("./entity/customer");
 var amqp = require("amqplib/callback_api");
+var axios_1 = require("axios");
 (0, typeorm_1.createConnection)()
     .then(function (db) {
     var customerRepository = db.getRepository(customer_1.Customer);
@@ -77,8 +78,8 @@ var amqp = require("amqplib/callback_api");
                     }
                 });
             }); });
-            app.post("/customer/fundaccount", function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-                var customer_id, customer;
+            app.post("/customer/fundaccount", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+                var customer_id, customer, responseFromBillingService;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
@@ -93,10 +94,10 @@ var amqp = require("amqplib/callback_api");
                             if (!customer) {
                                 res.sendStatus(404).send("User not found");
                             }
-                            console.log("Queing transaction for processing.........");
-                            channel.sendToQueue("transaction_created", Buffer.from(JSON.stringify(req.body)));
-                            res.json(req.body);
-                            return [2 /*return*/];
+                            return [4 /*yield*/, axios_1.default.post("http://localhost:8081/billing/createTransaction", req.body)];
+                        case 2:
+                            responseFromBillingService = _a.sent();
+                            return [2 /*return*/, res.send(responseFromBillingService.data)];
                     }
                 });
             }); });

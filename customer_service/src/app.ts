@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { createConnection } from "typeorm";
 import { Customer } from "./entity/customer";
 import * as amqp from "amqplib/callback_api";
+import axios from "axios";
 
 createConnection()
   .then((db) => {
@@ -40,7 +41,7 @@ createConnection()
 
           app.post(
             "/customer/fundaccount",
-            async (req: Request, res: Response, next: express.NextFunction) => {
+            async (req: Request, res: Response) => {
               const customer_id = req.body.customer_id;
               if (customer_id === null || customer_id == null) {
                 res.sendStatus(400).send("Please input customer id");
@@ -52,13 +53,18 @@ createConnection()
                 res.sendStatus(404).send("User not found");
               }
 
-              console.log("Queing transaction for processing.........");
-              channel.sendToQueue(
-                "transaction_created",
-                Buffer.from(JSON.stringify(req.body))
+              // console.log("Queing transaction for processing.........");
+              // channel.sendToQueue(
+              //   "transaction_created",
+              //   Buffer.from(JSON.stringify(req.body))
+              // );
+
+              const responseFromBillingService = await axios.post(
+                "http://localhost:8081/billing/createTransaction",
+                req.body
               );
 
-              res.json(req.body);
+              return res.send(responseFromBillingService.data);
             }
           );
 

@@ -47,6 +47,27 @@ createConnection()
             { noAck: true }
           );
 
+          app.post(
+            "/billing/createTransaction",
+            async (req: Request, res: Response) => {
+              const billing: Billing = new Billing();
+              const payload = req.body;
+              billing.customer_id = payload.customer_id;
+              billing.amount = payload.amount;
+              console.log(
+                "Processing transaction for customer: " +
+                  billing.customer_id +
+                  " for amount: " +
+                  billing.amount
+              );
+
+              const saveBilling = await billingRepository.save(billing);
+              console.log(saveBilling);
+
+              res.send(JSON.stringify(saveBilling));
+            }
+          );
+
           app.listen(8081);
           console.log("Billing service started......");
           process.on("beforeExit", () => {
